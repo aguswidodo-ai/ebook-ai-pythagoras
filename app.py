@@ -32,7 +32,6 @@ if "tutor_values" not in st.session_state:
 # ===============================
 # FUNGSI BANTU
 # ===============================
-
 def normalize_input(text):
     text = text.lower()
     text = text.replace("²", "^2")
@@ -55,9 +54,6 @@ st.subheader("Tutor Adaptif Teorema Pythagoras (SMP)")
 
 tab1, tab2 = st.tabs(["📘 Latihan", "📊 Tentang Penelitian"])
 
-# ===============================
-# TAB LATIHAN
-# ===============================
 with tab1:
 
     nama = st.text_input("Masukkan Nama Lengkap Siswa")
@@ -68,7 +64,7 @@ with tab1:
     )
 
     # ===============================
-    # MODE PENELITIAN (TETAP)
+    # MODE PENELITIAN
     # ===============================
     if mode == "Mode Penelitian (Tes)":
 
@@ -119,20 +115,8 @@ with tab1:
                 st.write(f"Waktu respon: {waktu_respon} detik")
                 st.write(f"Skor: {st.session_state.score}/{st.session_state.total}")
 
-                st.session_state.history.append({
-                    "Nama": nama,
-                    "Mode": mode,
-                    "Sisi_a": a,
-                    "Sisi_b": b,
-                    "Jawaban_Siswa": jawaban,
-                    "Jawaban_Benar": round(jawaban_benar,2),
-                    "Hasil": hasil,
-                    "Confidence": confidence,
-                    "Waktu_Respon": waktu_respon
-                })
-
     # ===============================
-    # MODE TUTOR AI (BERBASIS PERTANYAAN SISWA)
+    # MODE TUTOR AI (BARU)
     # ===============================
     else:
 
@@ -148,109 +132,81 @@ with tab1:
                 st.stop()
 
             if not contains_pythagoras_keyword(user_input):
-                st.info("Pertanyaan di luar materi Teorema Pythagoras. Silakan ajukan pertanyaan tentang panjang sisi segitiga siku-siku.")
+                st.info("Pertanyaan di luar materi Teorema Pythagoras.")
                 st.stop()
 
             nums = extract_numbers(user_input)
 
-            # Tahap awal: ekstrak angka dari pertanyaan
+            # Tahap awal
             if st.session_state.tutor_state == 0:
 
                 if len(nums) >= 2:
                     a = float(nums[0])
                     b = float(nums[1])
-                    jawaban_benar = math.sqrt(a**2 + b**2)
+                    hasil = math.sqrt(a**2 + b**2)
 
                     st.session_state.tutor_values = {
                         "a": a,
                         "b": b,
-                        "hasil": jawaban_benar
+                        "hasil": hasil
                     }
 
                     st.session_state.tutor_state = 1
-                    st.success("Baik. Rumus apa yang digunakan untuk mencari sisi miring?")
+                    st.success("Rumus apa yang digunakan untuk mencari sisi miring?")
                 else:
-                    st.info("Sebutkan dua panjang sisi yang diketahui pada segitiga siku-siku.")
-                return
+                    st.info("Sebutkan dua panjang sisi yang diketahui.")
 
-            # Tahap rumus
-            if st.session_state.tutor_state == 1:
+            elif st.session_state.tutor_state == 1:
+
                 norm = normalize_input(user_input)
+
                 if "a^2" in norm and "b^2" in norm:
                     st.session_state.tutor_state = 2
-                    st.success("Bagus. Sekarang hitung nilai kuadrat masing-masing sisi.")
+                    st.success("Sekarang hitung nilai kuadrat masing-masing sisi.")
                 else:
-                    st.info("Ingat hubungan antara sisi siku-siku dan sisi miring.")
-                return
+                    st.info("Ingat hubungan a² + b² = c².")
 
-            # Tahap kuadrat
-            if st.session_state.tutor_state == 2:
+            elif st.session_state.tutor_state == 2:
+
                 nums = extract_numbers(user_input)
                 a = st.session_state.tutor_values["a"]
                 b = st.session_state.tutor_values["b"]
 
                 if str(int(a**2)) in nums and str(int(b**2)) in nums:
                     st.session_state.tutor_state = 3
-                    st.success("Tepat. Sekarang jumlahkan hasil kuadrat tersebut.")
+                    st.success("Jumlahkan hasil kuadrat tersebut.")
                 else:
-                    st.info("Periksa kembali hasil kuadrat masing-masing sisi.")
-                return
+                    st.info("Periksa kembali hasil kuadratnya.")
 
-            # Tahap penjumlahan
-            if st.session_state.tutor_state == 3:
+            elif st.session_state.tutor_state == 3:
+
                 nums = extract_numbers(user_input)
                 a = st.session_state.tutor_values["a"]
                 b = st.session_state.tutor_values["b"]
 
                 if str(int(a**2 + b**2)) in nums:
                     st.session_state.tutor_state = 4
-                    st.success("Bagus. Langkah terakhir apa yang harus dilakukan?")
+                    st.success("Langkah terakhir apa?")
                 else:
-                    st.info("Jumlahkan hasil kuadrat tadi terlebih dahulu.")
-                return
+                    st.info("Jumlahkan dulu hasil kuadratnya.")
 
-            # Tahap akar
-            if st.session_state.tutor_state == 4:
+            elif st.session_state.tutor_state == 4:
+
                 nums = extract_numbers(user_input)
                 hasil = st.session_state.tutor_values["hasil"]
 
                 if nums and abs(float(nums[0]) - hasil) < 0.01:
-                    st.success("🎉 Selamat! Kamu berhasil menemukan jawabannya melalui langkah yang benar dan sistematis.")
+                    st.success("🎉 Selamat! Kamu menemukan jawabannya dengan langkah yang benar.")
                     st.session_state.score += 1
                     st.session_state.total += 1
                     st.session_state.tutor_state = 0
                 else:
                     st.info("Ambil akar dari hasil penjumlahan tersebut.")
-                return
 
-    # ===============================
-    # GRAFIK
-    # ===============================
-    if st.session_state.history:
-
-        st.markdown("## 📈 Grafik Performa")
-
-        df = pd.DataFrame(st.session_state.history)
-
-        benar_count = len(df[df["Hasil"] == "Benar"])
-        salah_count = len(df[df["Hasil"] == "Salah"])
-
-        fig, ax = plt.subplots()
-        ax.bar(["Benar", "Salah"], [benar_count, salah_count])
-        ax.set_ylabel("Jumlah")
-        ax.set_title("Performa Jawaban")
-
-        st.pyplot(fig)
-
-# ===============================
-# TAB PENELITIAN
-# ===============================
 with tab2:
     st.markdown("""
     Aplikasi ini memiliki dua mode pembelajaran:
 
     1. Mode Penelitian (Tes langsung dengan evaluasi hasil).
-    2. Mode Tutor AI berbasis dialog scaffolding yang menuntun siswa tanpa memberikan jawaban langsung.
-
-    Sistem Tutor AI hanya merespons pertanyaan terkait Teorema Pythagoras.
+    2. Mode Tutor AI berbasis dialog scaffolding tanpa memberikan jawaban langsung.
     """)
