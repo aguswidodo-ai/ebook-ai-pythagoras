@@ -4,13 +4,15 @@ import time
 import math
 import pandas as pd
 import matplotlib.pyplot as plt
-import re
 
 st.set_page_config(page_title="E-Book Interaktif Berbasis AI", layout="wide")
 
 # ===============================
 # SESSION STATE
 # ===============================
+if "started" not in st.session_state:
+    st.session_state.started = False
+
 if "score" not in st.session_state:
     st.session_state.score = 0
 
@@ -23,37 +25,17 @@ if "history" not in st.session_state:
 if "start_time" not in st.session_state:
     st.session_state.start_time = 0
 
-if "tutor_state" not in st.session_state:
-    st.session_state.tutor_state = 0
-
-if "tutor_values" not in st.session_state:
-    st.session_state.tutor_values = {}
-
-# ===============================
-# FUNGSI BANTU
-# ===============================
-def normalize_input(text):
-    text = text.lower()
-    text = text.replace("²", "^2")
-    text = text.replace("√", "sqrt")
-    text = text.replace("akar", "sqrt")
-    return text
-
-def extract_numbers(text):
-    return re.findall(r"[-+]?\d*\.\d+|\d+", text)
-
-def contains_pythagoras_keyword(text):
-    keywords = ["sisi", "miring", "siku", "hipotenusa", "pythagoras", "segitiga"]
-    return any(k in text.lower() for k in keywords)
-
 # ===============================
 # HEADER
 # ===============================
-st.title("📐 E-Book Interaktif Berbasis AI")
+st.title("📐 E-Book Interaktif Berbasis Rule-Based ITS")
 st.subheader("Tutor Adaptif Teorema Pythagoras (SMP)")
 
 tab1, tab2 = st.tabs(["📘 Latihan", "📊 Tentang Penelitian"])
 
+# ===============================
+# TAB LATIHAN
+# ===============================
 with tab1:
 
     nama = st.text_input("Masukkan Nama Lengkap Siswa")
@@ -63,67 +45,25 @@ with tab1:
         ["Mode Penelitian (Tes)", "Mode Tutor AI (Scaffolding)"]
     )
 
-    # ===============================
-    # MODE PENELITIAN
-    # ===============================
-    if mode == "Mode Penelitian (Tes)":
+    if st.button("🎲 Mulai Latihan Baru"):
+        a = random.randint(3, 9)
+        b = random.randint(3, 9)
+        st.session_state.a = a
+        st.session_state.b = b
+        st.session_state.jawaban_benar = math.sqrt(a**2 + b**2)
+        st.session_state.started = True
+        st.session_state.start_time = time.time()
 
-        if st.button("🎲 Mulai Latihan Baru"):
-            a = random.randint(3, 9)
-            b = random.randint(3, 9)
-            st.session_state.a = a
-            st.session_state.b = b
-            st.session_state.jawaban_benar = math.sqrt(a**2 + b**2)
-            st.session_state.start_time = time.time()
+    if st.session_state.started:
 
-        if "a" in st.session_state:
+        a = st.session_state.a
+        b = st.session_state.b
+        jawaban_benar = st.session_state.jawaban_benar
 
-            a = st.session_state.a
-            b = st.session_state.b
-            jawaban_benar = st.session_state.jawaban_benar
+        st.info(f"Diketahui segitiga siku-siku dengan sisi {a} cm dan {b} cm. Berapa panjang sisi miringnya?")
 
-            st.info(f"Diketahui segitiga siku-siku dengan sisi {a} dan {b}. Berapa panjang sisi miringnya?")
-
-            jawaban = st.text_input("Jawabanmu:")
-            confidence = st.slider("Seberapa yakin kamu terhadap jawabanmu? (1-5)", 1, 5, 3)
-
-            if st.button("Kirim"):
-
-                if not nama:
-                    st.warning("Masukkan nama siswa terlebih dahulu.")
-                    st.stop()
-
-                try:
-                    jawaban_float = float(jawaban)
-                except:
-                    st.warning("Masukkan angka yang valid.")
-                    st.stop()
-
-                waktu_respon = round(time.time() - st.session_state.start_time, 2)
-                selisih = abs(jawaban_float - jawaban_benar)
-
-                st.session_state.total += 1
-
-                if selisih < 0.01:
-                    st.success("Benar.")
-                    st.session_state.score += 1
-                    hasil = "Benar"
-                else:
-                    st.error(f"Salah. Jawaban yang benar adalah {round(jawaban_benar,2)}")
-                    hasil = "Salah"
-
-                st.write(f"Waktu respon: {waktu_respon} detik")
-                st.write(f"Skor: {st.session_state.score}/{st.session_state.total}")
-
-    # ===============================
-    # MODE TUTOR AI (BARU)
-    # ===============================
-    else:
-
-        st.info("Silakan ajukan pertanyaan terkait Teorema Pythagoras.")
-
-        user_input = st.text_input("Tuliskan pertanyaanmu:")
-        confidence = st.slider("Seberapa yakin kamu terhadap pemahamanmu? (1-5)", 1, 5, 3)
+        jawaban = st.text_input("Jawabanmu (dalam cm):")
+        confidence = st.slider("Seberapa yakin kamu terhadap jawabanmu? (1-5)", 1, 5, 3)
 
         if st.button("Kirim"):
 
@@ -131,82 +71,126 @@ with tab1:
                 st.warning("Masukkan nama siswa terlebih dahulu.")
                 st.stop()
 
-            if not contains_pythagoras_keyword(user_input):
-                st.info("Pertanyaan di luar materi Teorema Pythagoras.")
+            try:
+                jawaban_float = float(jawaban)
+            except:
+                st.warning("Masukkan angka yang valid.")
                 st.stop()
 
-            nums = extract_numbers(user_input)
+            waktu_respon = round(time.time() - st.session_state.start_time, 2)
+            selisih = abs(jawaban_float - jawaban_benar)
 
-            # Tahap awal
-            if st.session_state.tutor_state == 0:
+            st.session_state.total += 1
 
-                if len(nums) >= 2:
-                    a = float(nums[0])
-                    b = float(nums[1])
-                    hasil = math.sqrt(a**2 + b**2)
+            # ===============================
+            # MODE PENELITIAN (TES LANGSUNG)
+            # ===============================
+            if mode == "Mode Penelitian (Tes)":
 
-                    st.session_state.tutor_values = {
-                        "a": a,
-                        "b": b,
-                        "hasil": hasil
-                    }
-
-                    st.session_state.tutor_state = 1
-                    st.success("Rumus apa yang digunakan untuk mencari sisi miring?")
-                else:
-                    st.info("Sebutkan dua panjang sisi yang diketahui.")
-
-            elif st.session_state.tutor_state == 1:
-
-                norm = normalize_input(user_input)
-
-                if "a^2" in norm and "b^2" in norm:
-                    st.session_state.tutor_state = 2
-                    st.success("Sekarang hitung nilai kuadrat masing-masing sisi.")
-                else:
-                    st.info("Ingat hubungan a² + b² = c².")
-
-            elif st.session_state.tutor_state == 2:
-
-                nums = extract_numbers(user_input)
-                a = st.session_state.tutor_values["a"]
-                b = st.session_state.tutor_values["b"]
-
-                if str(int(a**2)) in nums and str(int(b**2)) in nums:
-                    st.session_state.tutor_state = 3
-                    st.success("Jumlahkan hasil kuadrat tersebut.")
-                else:
-                    st.info("Periksa kembali hasil kuadratnya.")
-
-            elif st.session_state.tutor_state == 3:
-
-                nums = extract_numbers(user_input)
-                a = st.session_state.tutor_values["a"]
-                b = st.session_state.tutor_values["b"]
-
-                if str(int(a**2 + b**2)) in nums:
-                    st.session_state.tutor_state = 4
-                    st.success("Langkah terakhir apa?")
-                else:
-                    st.info("Jumlahkan dulu hasil kuadratnya.")
-
-            elif st.session_state.tutor_state == 4:
-
-                nums = extract_numbers(user_input)
-                hasil = st.session_state.tutor_values["hasil"]
-
-                if nums and abs(float(nums[0]) - hasil) < 0.01:
-                    st.success("🎉 Selamat! Kamu menemukan jawabannya dengan langkah yang benar.")
+                if selisih < 0.01:
+                    st.success("✔ Benar. Jawabanmu tepat.")
                     st.session_state.score += 1
-                    st.session_state.total += 1
-                    st.session_state.tutor_state = 0
+                    hasil = "Benar"
                 else:
-                    st.info("Ambil akar dari hasil penjumlahan tersebut.")
+                    st.error(f"✘ Salah. Jawaban yang benar adalah {round(jawaban_benar,2)} cm.")
+                    hasil = "Salah"
 
+            # ===============================
+            # MODE TUTOR AI (SCAFFOLDING TERSTRUKTUR)
+            # ===============================
+            else:
+
+                if selisih < 0.01:
+                    st.success("🎉 Selamat! Jawabanmu benar.")
+                    st.info("Coba jelaskan kembali langkah-langkah yang kamu gunakan untuk menemukan hasil tersebut.")
+                    st.session_state.score += 1
+                    hasil = "Benar"
+
+                else:
+                    hasil = "Salah"
+
+                    # Kategori Kesalahan Konseptual (jauh sekali)
+                    if selisih > jawaban_benar * 0.5:
+                        st.info("Petunjuk Konsep: Sisi miring adalah sisi yang berhadapan dengan sudut 90° pada segitiga siku-siku.")
+                        st.info("Pastikan kamu menggunakan hubungan antara sisi siku-siku dan sisi miring.")
+
+                    # Kesalahan Prosedural (sedang)
+                    elif selisih > 1:
+                        st.info("Petunjuk Prosedur: Gunakan rumus Teorema Pythagoras → a² + b² = c².")
+                        st.info("Hitung kuadrat masing-masing sisi terlebih dahulu, lalu jumlahkan.")
+
+                    # Kesalahan Teknis (kecil)
+                    else:
+                        st.info("Petunjuk Perhitungan: Setelah menjumlahkan a² + b², jangan lupa mengambil akar kuadratnya.")
+                        st.info("Periksa kembali langkah akarmu dengan teliti.")
+
+            st.write(f"Waktu respon: {waktu_respon} detik")
+            st.write(f"Skor sementara: {st.session_state.score}/{st.session_state.total}")
+
+            # Simpan ke history
+            st.session_state.history.append({
+                "Nama": nama,
+                "Mode": mode,
+                "Sisi_a": a,
+                "Sisi_b": b,
+                "Jawaban_Siswa": jawaban_float,
+                "Jawaban_Benar": round(jawaban_benar,2),
+                "Hasil": hasil,
+                "Confidence": confidence,
+                "Waktu_Respon": waktu_respon
+            })
+
+    # ===============================
+    # GRAFIK PERFORMA
+    # ===============================
+    if st.session_state.history:
+
+        st.markdown("## 📈 Grafik Performa")
+
+        df = pd.DataFrame(st.session_state.history)
+
+        benar_count = len(df[df["Hasil"] == "Benar"])
+        salah_count = len(df[df["Hasil"] == "Salah"])
+
+        fig, ax = plt.subplots()
+        ax.bar(["Benar", "Salah"], [benar_count, salah_count])
+        ax.set_ylabel("Jumlah")
+        ax.set_title("Performa Jawaban")
+
+        st.pyplot(fig)
+
+        csv = df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            "📥 Export Data CSV",
+            csv,
+            "data_penelitian_pythagoras.csv",
+            "text/csv"
+        )
+
+# ===============================
+# TAB PENELITIAN
+# ===============================
 with tab2:
     st.markdown("""
-    Aplikasi ini memiliki dua mode pembelajaran:
+    Aplikasi ini dikembangkan sebagai bagian dari penelitian pengembangan (R&D) 
+    untuk menghasilkan e-book interaktif berbasis Rule-Based Intelligent Tutoring System.
 
+    Fitur utama:
     1. Mode Penelitian (Tes langsung dengan evaluasi hasil).
-    2. Mode Tutor AI berbasis dialog scaffolding tanpa memberikan jawaban langsung.
+    2. Mode Tutor AI (Scaffolding terstruktur berbasis tingkat kesalahan siswa).
+
+    Sistem Tutor AI mengklasifikasikan kesalahan siswa menjadi:
+    - Kesalahan Konseptual
+    - Kesalahan Prosedural
+    - Kesalahan Teknis
+
+    Data yang dikumpulkan:
+    - Nama siswa
+    - Mode pembelajaran
+    - Jawaban siswa
+    - Confidence level
+    - Waktu respon
+    - Hasil benar/salah
+
+    Data dapat diekspor dalam format CSV untuk analisis lebih lanjut.
     """)
